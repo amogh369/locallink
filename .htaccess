@@ -1,0 +1,16 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule ^$ index.php [L]
+
+<Files "config.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "_env.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set X-Content-Type-Options "nosniff"
