@@ -1,10 +1,11 @@
 FROM php:8.2-apache
 
-RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends libpq-dev \
-    && docker-php-ext-install -j$(nproc) pdo pdo_pgsql \
-    && apt-get purge -y --auto-remove libpq-dev \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# install-php-extensions is the fastest way to install PHP extensions in Docker
+# It handles all dependencies automatically, much faster than apt-get
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/install-php-extensions \
+    && install-php-extensions pdo_pgsql
 
 RUN a2enmod rewrite headers
 
@@ -23,7 +24,7 @@ P="/var/www/html/_env.php"
 printf '<?php\n' > "$P"
 printf '$_ENV["DATABASE_URL"]="%s";\n' "$DATABASE_URL" >> "$P"
 echo "=== _env.php written ==="
-echo "=== URL prefix: $(echo "$DATABASE_URL" | cut -c1-30) ==="
+echo "=== URL: $(echo "$DATABASE_URL" | cut -c1-40) ==="
 exec apache2-foreground
 SCRIPT
 
