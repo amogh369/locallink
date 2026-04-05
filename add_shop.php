@@ -1,5 +1,5 @@
 <?php // api/add_shop.php
-require_once '../config.php';
+require_once 'config.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role']!=='shop_owner') jsonResponse(false,'Unauthorised.');
 $d = json_decode(file_get_contents('php://input'),true);
 $ownerId = $_SESSION['user_id'];
