@@ -128,7 +128,7 @@ $cnt->execute([$userId]); $totalOrders=(int)$cnt->fetchColumn();
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;">
           <a href="manage_products.php?shop_id=<?=$s['shop_id']?>" class="btn-ll btn-secondary-ll btn-sm-ll" style="flex:1;text-align:center;">📦 Products</a>
-          <a href="add_shop.php?edit=<?=$s['shop_id']?>" class="btn-ll btn-outline-ll btn-sm-ll">✏️ Edit</a>
+          <a href="edit_shop.php?id=<?=$s['shop_id']?>" class="btn-ll btn-outline-ll btn-sm-ll">✏️ Edit</a>
         </div>
       </div>
       <?php endforeach;?>
