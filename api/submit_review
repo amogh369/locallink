@@ -1,0 +1,73 @@
+<?php
+require_once '../config.php';
+if (!isset($_SESSION['user_id'])) jsonResponse(false, 'Not logged in.');
+
+$d       = json_decode(file_get_contents('php://input'), true);
+$userId  = $_SESSION['user_id'];
+$orderId = intval($d['order_id'] ?? 0);
+$shopId  = intval($d['shop_id']  ?? 0);
+$rating  = intval($d['rating']   ?? 0);
+$comment = trim($d['comment']    ?? '');
+
+// Validate inputs
+if (!$orderId || !$shopId)        jsonResponse(false, 'Invalid order or shop.');
+if ($rating < 1 || $rating > 5)  jsonResponse(false, 'Please select 1 to 5 stars.');
+
+// Make sure this order belongs to this user AND is delivered
+$check = $pdo->prepare(
+    "SELECT order_id FROM orders
+     WHERE order_id = ? AND user_id = ? AND status = 'delivered'"
+);
+$check->execute([$orderId, $userId]);
+if (!$check->fetch()) {
+    jsonResponse(false, 'You can only review delivered orders.');
+}
+
+// Check not already reviewed this order
+$dup = $pdo->prepare(
+    "SELECT review_id FROM reviews WHERE user_id = ? AND order_id = ?"
+);
+$dup->execute([$userId, $orderId]);
+if ($dup->fetch()) {
+    jsonResponse(false, 'You have already reviewed this order.');
+}
+
+// Insert review (trigger trg_update_rating fires automatically after this)
+$stmt = $pdo->prepare(
+    "INSERT INTO reviews (user_id, shop_id, order_id, rating, comment)
+     VALUES (?, ?, ?, ?, ?)"
+);
+$stmt->execute([$userId, $shopId, $orderId, $rating, $comment]);
+
+// Get shop name for the response message
+$sRow = $pdo->prepare("SELECT name FROM shops WHERE shop_id = ?");
+$sRow->execute([$shopId]);
+$shop = $sRow->fetch();
+$shopName = $shop['name'] ?? 'the shop';
+
+// Notify shop owner about the new review
+$ownerRow = $pdo->prepare("SELECT owner_id FROM shops WHERE shop_id = ?");
+$ownerRow->execute([$shopId]);
+$owner = $ownerRow->fetch();
+
+if ($owner) {
+    $stars   = str_repeat('⭐', $rating);
+    $notifMsg = "A customer rated your shop \"$shopName\" $stars ($rating/5 stars).";
+    if ($comment) $notifMsg .= " Comment: \"$comment\"";
+
+    $notif = $pdo->prepare(
+        "INSERT INTO notifications (user_id, title, message, type)
+         VALUES (?, ?, ?, 'system')"
+    );
+    $notif->execute([
+        $owner['owner_id'],
+        "New Review Received! $stars",
+        $notifMsg
+    ]);
+}
+
+jsonResponse(true, 'Review submitted!', [
+    'shop_name' => $shopName,
+    'rating'    => $rating
+]);
+?>
